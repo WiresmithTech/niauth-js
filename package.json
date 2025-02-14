@@ -15,7 +15,8 @@
   },
   "dependencies": {
     "jsbn": "1.1.0",
-    "xml-parse-from-string": "1.0.0"
+    "xml-parse-from-string": "1.0.0",
+    "@aws-crypto/sha1-browser": "^5.2.0"
   },
   "devDependencies": {
     "@types/jsbn": "^1.2.33",
