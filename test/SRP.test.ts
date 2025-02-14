@@ -5,10 +5,10 @@
  */
 
 "use strict";
-var assert = require('assert');
-var SRP = require('../lib/SRP.js');
-var Base64 = require('../lib/Base64.js');
-var Utils = require('../lib/Utils.js');
+import { Client, Server, BigInteger, SRPOps } from '../lib/SRP';
+import {describe, it, assert} from 'vitest';
+import { b64tohex, bigIntToBase64, hexStringToBase64, xorHashStrings, HashStringToByteArray } from '../lib/Utils';
+import { byteArrayToBase64 } from '../lib/Base64';
 
 // fake database
 var srpDatabase = {
@@ -58,19 +58,19 @@ var srpDatabase = {
 
 describe('SRP', function() {
 
-   it('should have a mutually-intelligible Client and Server', function() {
+   it('should have a mutually-intelligible Client and Server', async function() {
       var username = "brandon";
       var password = "test";
 
-      var client = new SRP.Client();
-      var server = new SRP.Server(
+      var client = new Client();
+      var server = new Server(
          function(username) {
             // needs to return n, g, v, and s
             //
             return srpDatabase[username];
          });
 
-      var loginInfo = server.startLogin(username);
+      var loginInfo = await server.startLogin(username);
 
       client.setIdentity({username:username, password:password});
       client.setServerInfo(loginInfo);
@@ -85,10 +85,10 @@ describe('SRP', function() {
       var str2     = "24d65375092b75cb05060f1561c8b079839a3fda";
       var expected = "47c6b48c5093a3005d56559586d9eb57f4ca1354";
 
-      assert.deepEqual(Utils.xorHashStrings(str1, str2), expected);
+      assert.deepEqual(xorHashStrings(str1, str2), expected);
    });
 
-   it('should match results step-by-step', function() {
+   it('should match results step-by-step', async () => {
       // A bunch of magic values, copied from the C# (Silverlight) implementation.
       // This is to make sure that we're doing math the same way.
 
@@ -113,50 +113,58 @@ describe('SRP', function() {
       var Mcenc = "7+gitq19/I//F43+6gnRgQrtfmU=";
       var Msenc = "keoskY9NXrDYAZ2h3QCY2TTs5mM=";
 
-      var SRPOps = SRP.SRPOps;
-      var BigInteger = SRP.BigInteger;
 
-      var N = new BigInteger(Utils.b64tohex(Nenc), 16);
+      var N = new BigInteger(b64tohex(Nenc), 16);
 
-      var g = new BigInteger(Utils.b64tohex(genc), 16);
-      var s = Utils.hashStringToByteArray(Utils.b64tohex(salt));
-      var B = new BigInteger(Utils.b64tohex(Benc), 16);
+      var g = new BigInteger(b64tohex(genc), 16);
+      var s = HashStringToByteArray(b64tohex(salt));
+      var B = new BigInteger(b64tohex(Benc), 16);
 
-      var a = new BigInteger(Utils.b64tohex(aenc), 16);
+      var a = new BigInteger(b64tohex(aenc), 16);
 
       // And now, the math!
 
+      console.log("Starting");
       var A = SRPOps.A(N, g, a);
-      var AencActual = Utils.bigIntToBase64(A, 128);
+      console.log("Got a");
+      var AencActual = bigIntToBase64(A, 128);
       assert.deepEqual(AencActual, Aenc);
+      console.log("A OK");
 
-      var u = SRPOps.u(A, B);
-      var uencActual = Utils.bigIntToBase64(u, 20);
+      var u = await SRPOps.u(A, B);
+      var uencActual = bigIntToBase64(u, 20);
       assert.deepEqual(uencActual, uenc);
+      console.log("u OK");
 
-      var k = SRPOps.k(N, g);
-      var kencActual = Utils.bigIntToBase64(k, 20);
+      var k = await SRPOps.k(N, g);
+      var kencActual = bigIntToBase64(k, 20);
       assert.deepEqual(kencActual, kenc);
+      console.log("k OK");
 
-      var x = SRPOps.x(s, username, password);
-      var xencActual = Utils.bigIntToBase64(x, 20);
+      var x = await SRPOps.x(s, username, password);
+      var xencActual = bigIntToBase64(x, 20);
       assert.deepEqual(xencActual, xenc);
+      console.log("x OK");
 
       var S = SRPOps.Sc(N, g, B, k, x, a, u);
-      var SencActual = Utils.bigIntToBase64(S, 128);
+      var SencActual = bigIntToBase64(S, 128);
       assert.deepEqual(SencActual, Senc);
+      console.log("S OK");
 
-      var K = SRPOps.K(S);
-      var KencActual = Base64.encode(K);
+      var K = await SRPOps.K(S);
+      var KencActual = byteArrayToBase64(K);
       assert.deepEqual(KencActual, Kenc);
+      console.log("K OK");
 
-      var Mc = SRPOps.Mc(N, g, username, s, A, B, K);
-      var McencActual = Utils.hexStringToBase64(Mc);
+      var Mc = await SRPOps.Mc(N, g, username, s, A, B, K);
+      var McencActual = hexStringToBase64(Mc);
       assert.deepEqual(McencActual, Mcenc);
+      console.log("Mc OK");
 
-      var Ms = SRPOps.Ms(A, Mc, K);
-      var MsencActual = Utils.hexStringToBase64(Ms);
+      var Ms = await SRPOps.Ms(A, Mc, K);
+      var MsencActual = hexStringToBase64(Ms);
       assert.deepEqual(MsencActual, Msenc);
+      console.log("MS OK");
    });
 
 });

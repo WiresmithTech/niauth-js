@@ -3,25 +3,25 @@
  * @copyright National Instruments, 2016-2017
  * @license MIT
  */
-'use strict';
 
-var Base64 = require('./Base64.js');
+import { BigInteger } from "jsbn";
+import { base64ToByteArray, byteArrayToBase64 } from "./Base64";
 
 /**
  * Transform a "hash string" into a byte array.
  */
-var hashStringToByteArray = function(str) {
-   var ar = [];
+export function HashStringToByteArray(str: string): Uint8Array {
+   var ar: number[] = [];
    for (var i = 0; i < str.length; i += 2) {
       ar.push(parseInt(str.substr(i, 2), 16));
    }
-   return ar;
+   return new Uint8Array(ar);
 };
 
 /**
  * Transform a byte array into a "hash string".
  */
-var byteArrayToHashString = function(ar) {
+export function byteArrayToHashString(ar) {
    var hs = '';
    for (var i = 0; i < ar.length; ++i) {
       hs += ('00' + (ar[i] & 0xFF).toString(16)).substr(-2);
@@ -30,65 +30,60 @@ var byteArrayToHashString = function(ar) {
 };
 
 // jsbn's bigint doesn't give all the bytes we expect all the time...
-var bigIntegerToBytes = function(bi, byteCount) {
-   var bytes = bi.toByteArray();
-   var i;
+export function bigIntegerToBytes(bi: BigInteger, byteCount: number): Uint8Array {
+   const bytes = bi.toByteArray();
+   const actual_byte_length = bytes.length;
 
-   if (bytes.length === byteCount) {
-      return bytes;
-   } else if (bytes.length < byteCount) {
+   if (actual_byte_length === byteCount) {
+      return new Uint8Array(bytes);
+   } else if (actual_byte_length < byteCount) {
       // left-pad with zeroes
       var paddingBytes = (byteCount - bytes.length);
-      var na = [];
-      for (i = 0; i < paddingBytes; ++i) {
-         na[i] = 0;
-      }
-      return na.concat(bytes);
-   } else if (bytes.length > byteCount) {
+      var na = new Uint8Array(paddingBytes).fill(0);
+      const padded = new Uint8Array([...na, ...bytes]);
+      return padded;
+   } else if (actual_byte_length > byteCount) {
       // trim leading zeroes
       var leaders = bytes.slice(0, bytes.length - byteCount);
-      for (i = 0; i < leaders.length; ++i) {
+      for (let i = 0; i < leaders.length; ++i) {
          if (leaders[i] !== 0) {
             throw 'attmpted to truncate to ' + byteCount;
          }
       }
-      return bytes.slice(bytes.length - byteCount);
+      return new Uint8Array(bytes.slice(bytes.length - byteCount));
+   }
+   else {
+      throw("unreachable")
    }
 };
 
-var b64tohex = function(b64str) {
-   var decoded = Base64.decode(b64str);
-   var decodedhex = '';
-   for (var i = 0; i < decoded.length; ++i) {
-      decodedhex += ('00' + decoded[i].toString(16)).substr(-2);
+function numberToHex(num: number): string {
+   return num.toString(16).padStart(2, '0');
+}
+
+export function b64tohex(b64str: string): string {
+   const bytes = base64ToByteArray(b64str);
+   let output = '';
+   for (const byte of bytes) {
+      output += numberToHex(byte);
    }
-   return decodedhex;
+   return output;
 };
 
-var hexStringToBase64 = function(str) {
-   var bytes = [];
+export function hexStringToBase64(str: string): string {
+   var bytes: number[] = [];
    for (var i = 0; i < str.length; i += 2) {
       bytes.push(parseInt(str.substr(i, 2), 16));
    }
-   return Base64.encode(bytes);
+   return byteArrayToBase64(new Uint8Array(bytes))
 };
 
-var byteStringToByteArray = function(str) {
-   var ar = [];
-   for (var i = 0; i < str.length; ++i) {
-      ar.push(String.fromCharCode(i));
-   }
-   return ar;
-};
-
-var bigIntToBase64 = function(ba, len) {
+export function bigIntToBase64(ba: BigInteger, len: number): string {
    var bytes = bigIntegerToBytes(ba, len);
-   for (var i = 0; i < bytes.length; ++i) {
-      bytes[i] = (bytes[i] & 0xFF);
-   }
-
-   return Base64.encode(bytes);
+   return byteArrayToBase64(bytes);
 };
+
+
 
 /* XOR two hash strings.
  * Example:
@@ -99,7 +94,7 @@ var bigIntToBase64 = function(ba, len) {
  * @param {hex string} b
  * @returns {hex string} a xor b
  */
-var xorHashStrings = function(a, b) {
+export function xorHashStrings(a: string, b: string): string {
    if (a.length !== b.length) {
       throw 'strings not same length';
    }
@@ -123,7 +118,7 @@ var xorHashStrings = function(a, b) {
  *
  * @param {String} regularBase64Str
  */
-var makeUrlBase64 = function(regularBase64Str) {
+export function makeUrlBase64(regularBase64Str: string): string {
    var newStr = '';
    for (var i = 0; i < regularBase64Str.length; ++i) {
       if (regularBase64Str.charAt(i) === '+') {
@@ -141,7 +136,7 @@ var makeUrlBase64 = function(regularBase64Str) {
  * This splits up a parameters string; as an example, the X-NI-AUTH-PARAMS
  * string has the format "N=4,s=[base64],B=[base64],ss=[base64]"
  */
-var splitParamsString = function(str) {
+export function splitParamsString(str: string): {[key: string]: string} {
    var ret = {};
    var params = str.split(',');
    for (var i = 0; i < params.length; ++i) {
@@ -156,17 +151,4 @@ var splitParamsString = function(str) {
       ret[name] = value;
    }
    return ret;
-};
-
-module.exports = {
-   b64tohex: b64tohex,
-   hexStringToBase64: hexStringToBase64,
-   hashStringToByteArray: hashStringToByteArray,
-   byteArrayToHashString: byteArrayToHashString,
-   byteStringToByteArray: byteStringToByteArray,
-   bigIntToBase64: bigIntToBase64,
-   makeUrlBase64: makeUrlBase64,
-   xorHashStrings: xorHashStrings,
-   bigIntegerToBytes: bigIntegerToBytes,
-   splitParamsString: splitParamsString,
 };

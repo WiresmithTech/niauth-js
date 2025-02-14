@@ -5,8 +5,8 @@
  */
 
 "use strict";
-var assert = require('assert');
-var BigInteger = require('jsbn').BigInteger;
+import { BigInteger } from "jsbn";
+import {describe, it, assert } from 'vitest';
 
 describe('BigInteger', function() {
 
