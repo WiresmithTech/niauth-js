@@ -4,23 +4,24 @@
  * @license MIT
  */
 /*
-* Convert the byte array to base 64. 
-* This is a feature being added to the base language but currently
-* isn't supported in chrome or edge.
-*/
+ * Convert the byte array to base 64.
+ * This is a feature being added to the base language but currently
+ * isn't supported in chrome or edge.
+ */
 export function byteArrayToBase64(array: Uint8Array): string {
-   const bytes_string = String.fromCharCode(...array.values());
-   return window.btoa(bytes_string);
+   const bytesString = String.fromCharCode(...array.values());
+   return window.btoa(bytesString);
 }
 
-
 /*
-* Convert a base64 string to a byte array.
-* This is now supported on the UInt8Array type but that
-* isn't avaialble in edge or chrome yet.
-*/
+ * Convert a base64 string to a byte array.
+ * This is now supported on the UInt8Array type but that
+ * isn't avaialble in edge or chrome yet.
+ */
 export function base64ToByteArray(string: string): Uint8Array {
-   var decoded = window.atob(string); 
-   const bytes = new Uint8Array(decoded.split("").map((c: string): number => c.charCodeAt(0)));
+   const decoded = window.atob(string);
+   const bytes = new Uint8Array(
+      decoded.split('').map((c: string): number => c.charCodeAt(0)),
+   );
    return bytes;
 }

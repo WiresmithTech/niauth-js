@@ -1,12 +1,16 @@
-module.exports = {
-   'env': {
-      'browser': true,
-      'commonjs': true,
-      'node': true,
-      'es6': true
-   },
-   'extends': 'eslint:recommended',
-   'rules': {
+// eslint.config.mjs
+import globals from "globals";
+import pluginJs from "@eslint/js";
+import tseslint from "typescript-eslint";
+
+
+export default [
+  {files: ["**/*.{js,mjs,cjs,ts}"]},
+  {files: ["**/*.js"], languageOptions: {sourceType: "module"}},
+  {languageOptions: { globals: globals.browser }},
+  pluginJs.configs.recommended,
+  ...tseslint.configs.recommended,
+  {rules: {
       // Classes should be pascal case.
       // NOTE: No ESLint rule for this!
 
@@ -86,5 +90,6 @@ module.exports = {
       'no-trailing-spaces': 2,
       'no-alert': 2,
       'no-param-reassign': 2,
-   }
-};
+   }}
+];
+

@@ -1,27 +1,33 @@
 {
-  "name": "niauth",
-  "version": "0.2.0",
-  "description": "NIAuth Client Library",
-  "main": "index.js",
-  "author": "bstreiff",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ni/niauth-js.git"
-  },
-  "scripts": {
-    "lint": "eslint index.js lib/; exit 0",
-    "test": "vitest --dom"
-  },
-  "dependencies": {
-    "jsbn": "1.1.0",
-    "xml-parse-from-string": "1.0.0",
-    "@aws-crypto/sha1-browser": "^5.2.0"
-  },
-  "devDependencies": {
-    "@types/jsbn": "^1.2.33",
-    "eslint": "4.7.0",
-    "happy-dom": "^17.1.0",
-    "vitest": "^3.0.5"
-  }
+   "name": "niauth",
+   "version": "0.2.0",
+   "description": "NIAuth Client Library",
+   "main": "index.js",
+   "author": "bstreiff",
+   "license": "MIT",
+   "repository": {
+      "type": "git",
+      "url": "https://github.com/ni/niauth-js.git"
+   },
+   "scripts": {
+      "lint": "eslint index.ts lib/; exit 0",
+      "test": "vitest --dom",
+      "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\""
+   },
+   "dependencies": {
+      "@aws-crypto/sha1-browser": "^5.2.0",
+      "jsbn": "1.1.0",
+      "xml-parse-from-string": "1.0.0"
+   },
+   "devDependencies": {
+      "@types/jsbn": "^1.2.33",
+      "@typescript-eslint/eslint-plugin": "^8.24.0",
+      "@typescript-eslint/parser": "^8.24.0",
+      "eslint": "^9.20.1",
+      "happy-dom": "^17.1.0",
+      "prettier": "^3.5.1",
+      "typescript": "^5.7.3",
+      "typescript-eslint": "^8.24.0",
+      "vitest": "^3.0.5"
+   }
 }

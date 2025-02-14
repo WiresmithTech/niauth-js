@@ -1,17 +1,15 @@
-import {Sha1} from '@aws-crypto/sha1-browser';
+import { Sha1 } from '@aws-crypto/sha1-browser';
 import { byteArrayToHashString } from './Utils';
 
 export async function sha1(str: string | Uint8Array): Promise<string> {
-  const hasher = new Sha1();
-  let buffer: Uint8Array;
+   const hasher = new Sha1();
 
-  if (typeof(str) == 'string') {
-    hasher.update(str)
-  }
-  else  {
-    hasher.update(str)
-  }
+   if (typeof str === 'string') {
+      hasher.update(str);
+   } else {
+      hasher.update(str);
+   }
 
-  const hash = await hasher.digest();
-  return byteArrayToHashString(hash);
+   const hash = await hasher.digest();
+   return byteArrayToHashString(hash);
 }
