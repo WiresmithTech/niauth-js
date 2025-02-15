@@ -17,7 +17,7 @@ import {
 import { byteArrayToBase64 } from '../lib/Base64';
 
 // fake database
-var srpDatabase = {
+const srpDatabase = {
    pantsman: {
       user: 'pantsman',
       password: '',
@@ -92,30 +92,30 @@ var srpDatabase = {
 
 describe('SRP', function () {
    it('should have a mutually-intelligible Client and Server', async function () {
-      var username = 'brandon';
-      var password = 'test';
+      const username = 'brandon';
+      const password = 'test';
 
-      var client = new Client();
-      var server = new Server(function (username) {
+      const client = new Client();
+      const server = new Server(function (username) {
          // needs to return n, g, v, and s
          //
          return srpDatabase[username];
       });
 
-      var loginInfo = await server.startLogin(username);
+      const loginInfo = await server.startLogin(username);
 
       client.setIdentity({ username: username, password: password });
       client.setServerInfo(loginInfo);
-      var clientParams = await client.generatePublicKeyAndProof();
-      var serverParams = await server.finishLogin(clientParams);
+      const clientParams = await client.generatePublicKeyAndProof();
+      await server.finishLogin(clientParams);
 
       assert.deepEqual(client.sharedKey, server.sharedKey);
    });
 
    it('can xor hash strings correctly', function () {
-      var str1 = '6310e7f959b8d6cb58505a80e7115b2e77502c8e';
-      var str2 = '24d65375092b75cb05060f1561c8b079839a3fda';
-      var expected = '47c6b48c5093a3005d56559586d9eb57f4ca1354';
+      const str1 = '6310e7f959b8d6cb58505a80e7115b2e77502c8e';
+      const str2 = '24d65375092b75cb05060f1561c8b079839a3fda';
+      const expected = '47c6b48c5093a3005d56559586d9eb57f4ca1354';
 
       assert.deepEqual(xorHashStrings(str1, str2), expected);
    });
@@ -125,71 +125,71 @@ describe('SRP', function () {
       // This is to make sure that we're doing math the same way.
 
       // These are the "input" values, returned by the server.
-      var Nenc =
+      const Nenc =
          'ieJUvpnjDnS8CjQLseVMV6+bLPH2bNQLFVj1nVgSrCdErkLGUGhosubcgk6I7XoqM417RFquVMZvqgXMwggvoJyvy003qXK1bukOLlW1cRW6KLCzRBljPsMG6WeNbKqAatVX1MDHtc/d35B4q2ZJ/UXDzFCE2H/MbbJH7yylr2c=';
-      var genc = 'Cw==';
-      var salt = 'K7YIn92KQeT9NfyZx7AYjw==';
-      var Benc =
+      const genc = 'Cw==';
+      const salt = 'K7YIn92KQeT9NfyZx7AYjw==';
+      const Benc =
          'MUOOiUox8LapdLRLlnBVhd1SK9a1324WdBUtrfzBYAySSo1LgEhtZOQlogbTBGPgfsFcyiH1uo/WcWSRzMyg27wfryZIKpEcENAZXly+3Wzy1rTSo8ZY4x9EwcK9HjV+TQxN5uvJ+zCcz/yxO5oLSSdKY7KLvvGtX7LVdENcEeE=';
-      var username = 'JohnDoe';
-      var password = 'secret';
+      const username = 'JohnDoe';
+      const password = 'secret';
 
       // For this test, we don't use SRP.a() to generate a random number.
-      var aenc =
+      const aenc =
          'eCUSboAbAdL0ZMy4zGq7CmulHcC94mVWD8GRy1HbfZg4MOuDQWYOio2H9Lfr27tCuHG5BSgZZudy1XX8SVm4hOvDZKNeQBcplWwadPmHjxyFHEByR5XbReJ+cLT5K7n/YdIwoJSwYj81HQYoOFjwKukKYQvh5zStm0EDAXZvdfg=';
 
       // These are the expected outputs.
-      var Aenc =
+      const Aenc =
          'bCRv5uIvBUyDZ7owIXxC9hCPUwK9/wndbcypk2Qnc5wiak5KSpe0eE6Mi/1PweqE9mu8WbpkHrVjiXUKNsPeyS9IkxieMKfsHw7WRTlSnsgFVInSo/UlKTDqP8gPxbgo9l/f6T9798z/uTeO+yk/ABHbPOPJamF/b+HWUKjSATk=';
-      var uenc = 'TY5+GM9i+WIqiTh7QDCcnYPJbE0=';
-      var kenc = 'B64MpqqSRGUVRn0f3LdsfHJYMMw=';
-      var xenc = 'psfVoz95IZaeVyUg5tAZSZdJTNU=';
-      var Senc =
+      const uenc = 'TY5+GM9i+WIqiTh7QDCcnYPJbE0=';
+      const kenc = 'B64MpqqSRGUVRn0f3LdsfHJYMMw=';
+      const xenc = 'psfVoz95IZaeVyUg5tAZSZdJTNU=';
+      const Senc =
          'H9jbD04W810duG5/yFeSw2mW81wKTZ4g3QE5VDZRa/nG+QZ//I2cVHFn6r8z1oWuBm6lf3d/Ade2qWV4xeqyEjiAJjCO9gcvqS/d4k0Tv9UBiGPx9JA16HTaUO3C5ixFY3qQ3+Uf25jXHvuSfMsPIS6cQUtfQBRN8/r6wqNBG9c=';
-      var Kenc = '86sYQyRFKP7A0lZWYHh13/3ZuMQaghRBnH+jDhvAO9pb6ToWBueFhw==';
-      var Mcenc = '7+gitq19/I//F43+6gnRgQrtfmU=';
-      var Msenc = 'keoskY9NXrDYAZ2h3QCY2TTs5mM=';
+      const Kenc = '86sYQyRFKP7A0lZWYHh13/3ZuMQaghRBnH+jDhvAO9pb6ToWBueFhw==';
+      const Mcenc = '7+gitq19/I//F43+6gnRgQrtfmU=';
+      const Msenc = 'keoskY9NXrDYAZ2h3QCY2TTs5mM=';
 
-      var N = new BigInteger(b64tohex(Nenc), 16);
+      const N = new BigInteger(b64tohex(Nenc), 16);
 
-      var g = new BigInteger(b64tohex(genc), 16);
-      var s = HashStringToByteArray(b64tohex(salt));
-      var B = new BigInteger(b64tohex(Benc), 16);
+      const g = new BigInteger(b64tohex(genc), 16);
+      const s = HashStringToByteArray(b64tohex(salt));
+      const B = new BigInteger(b64tohex(Benc), 16);
 
-      var a = new BigInteger(b64tohex(aenc), 16);
+      const a = new BigInteger(b64tohex(aenc), 16);
 
       // And now, the math!
 
-      var A = SRPOps.A(N, g, a);
-      var AencActual = bigIntToBase64(A, 128);
+      const A = SRPOps.A(N, g, a);
+      const AencActual = bigIntToBase64(A, 128);
       assert.deepEqual(AencActual, Aenc);
 
-      var u = await SRPOps.u(A, B);
-      var uencActual = bigIntToBase64(u, 20);
+      const u = await SRPOps.u(A, B);
+      const uencActual = bigIntToBase64(u, 20);
       assert.deepEqual(uencActual, uenc);
 
-      var k = await SRPOps.k(N, g);
-      var kencActual = bigIntToBase64(k, 20);
+      const k = await SRPOps.k(N, g);
+      const kencActual = bigIntToBase64(k, 20);
       assert.deepEqual(kencActual, kenc);
 
-      var x = await SRPOps.x(s, username, password);
-      var xencActual = bigIntToBase64(x, 20);
+      const x = await SRPOps.x(s, username, password);
+      const xencActual = bigIntToBase64(x, 20);
       assert.deepEqual(xencActual, xenc);
 
-      var S = SRPOps.Sc(N, g, B, k, x, a, u);
-      var SencActual = bigIntToBase64(S, 128);
+      const S = SRPOps.Sc(N, g, B, k, x, a, u);
+      const SencActual = bigIntToBase64(S, 128);
       assert.deepEqual(SencActual, Senc);
 
-      var K = await SRPOps.K(S);
-      var KencActual = byteArrayToBase64(K);
+      const K = await SRPOps.K(S);
+      const KencActual = byteArrayToBase64(K);
       assert.deepEqual(KencActual, Kenc);
 
-      var Mc = await SRPOps.Mc(N, g, username, s, A, B, K);
-      var McencActual = hexStringToBase64(Mc);
+      const Mc = await SRPOps.Mc(N, g, username, s, A, B, K);
+      const McencActual = hexStringToBase64(Mc);
       assert.deepEqual(McencActual, Mcenc);
 
-      var Ms = await SRPOps.Ms(A, Mc, K);
-      var MsencActual = hexStringToBase64(Ms);
+      const Ms = await SRPOps.Ms(A, Mc, K);
+      const MsencActual = hexStringToBase64(Ms);
       assert.deepEqual(MsencActual, Msenc);
    });
 });

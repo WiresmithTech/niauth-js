@@ -118,8 +118,8 @@ export class SRPOps {
       const Ab = bigIntegerToBytes(A, 128);
       const Bb = bigIntegerToBytes(B, 128);
       const ABb = new Uint8Array([...Ab, ...Bb]);
-      const aBb_sha = await sha1(ABb);
-      return new BigInteger(aBb_sha, 16);
+      const aBbSha = await sha1(ABb);
+      return new BigInteger(aBbSha, 16);
    }
 
    /**
@@ -139,8 +139,8 @@ export class SRPOps {
       const Nb = bigIntegerToBytes(N, 128);
       const gb = bigIntegerToBytes(g, 128);
       const Ngb = new Uint8Array([...Nb, ...gb]);
-      const Ngb_sha = await sha1(Ngb);
-      return new BigInteger(Ngb_sha, 16);
+      const NgbSha = await sha1(Ngb);
+      return new BigInteger(NgbSha, 16);
    }
 
    /**
