@@ -10,14 +10,13 @@
       "url": "https://github.com/ni/niauth-js.git"
    },
    "scripts": {
-      "lint": "eslint index.ts lib/; exit 0",
+      "lint": "eslint",
       "test": "vitest --dom",
       "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\""
    },
    "dependencies": {
-      "@aws-crypto/sha1-browser": "^5.2.0",
       "jsbn": "1.1.0",
-      "xml-parse-from-string": "1.0.0"
+      "xml-parse-from-string": "1.0.1"
    },
    "devDependencies": {
       "@types/jsbn": "^1.2.33",
