@@ -5,19 +5,19 @@
  */
 
 'use strict';
-import { Client, Server, BigInteger, SRPOps } from '../lib/SRP';
+import { Client, Server, SRPOps, UserEntry } from '../lib/SRP';
 import { describe, it, assert } from 'vitest';
 import {
    b64tohex,
-   bigIntToBase64,
    hexStringToBase64,
    xorHashStrings,
    HashStringToByteArray,
 } from '../lib/Utils';
 import { byteArrayToBase64 } from '../lib/Base64';
+import { bigIntFromBase64, bigIntToBase64 } from '../lib/BigInt';
 
 // fake database
-const srpDatabase = {
+const srpDatabase: { [key: string]: UserEntry } = {
    pantsman: {
       user: 'pantsman',
       password: '',
@@ -150,13 +150,11 @@ describe('SRP', function () {
       const Mcenc = '7+gitq19/I//F43+6gnRgQrtfmU=';
       const Msenc = 'keoskY9NXrDYAZ2h3QCY2TTs5mM=';
 
-      const N = new BigInteger(b64tohex(Nenc), 16);
-
-      const g = new BigInteger(b64tohex(genc), 16);
+      const N = bigIntFromBase64(Nenc);
+      const g = bigIntFromBase64(genc);
       const s = HashStringToByteArray(b64tohex(salt));
-      const B = new BigInteger(b64tohex(Benc), 16);
-
-      const a = new BigInteger(b64tohex(aenc), 16);
+      const B = bigIntFromBase64(Benc);
+      const a = bigIntFromBase64(aenc);
 
       // And now, the math!
 

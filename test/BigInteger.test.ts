@@ -7,6 +7,7 @@
 'use strict';
 import { BigInteger } from 'jsbn';
 import { describe, it, assert } from 'vitest';
+import { bigIntToBase64 } from '../lib/BigInt';
 
 describe('BigInteger', function () {
    function _byteArrayToHexString(ar) {
@@ -18,12 +19,12 @@ describe('BigInteger', function () {
    }
 
    function factorial(n) {
-      let sum = new BigInteger('1', 10);
+      let sum = BigInt('1');
 
       for (let i = 1; i < n; ++i) {
-         let iBig = new BigInteger(i.toString(), 10);
-         iBig = iBig.multiply(sum);
-         sum = sum.add(iBig);
+         let iBig = BigInt(i.toString());
+         iBig = iBig * sum;
+         sum = sum + iBig;
       }
 
       return sum;
@@ -45,9 +46,16 @@ describe('BigInteger', function () {
          '258623241511168180642964355153611979969197632389120000000000',
       );
 
-      const ebi = new BigInteger(_byteArrayToHexString(expected), 16);
-      const abi = new BigInteger(_byteArrayToHexString(actual.toByteArray()), 16);
+      const ebi = BigInt('0x' + _byteArrayToHexString(expected));
+      const abi = BigInt('0x' + actual.toString(16));
 
       assert.equal(abi.toString(), ebi.toString());
    });
+
+
+   it('Should encode correctly to base64 - matching the original', () => {
+      const bigInt = 43844367121343516932267562909890116225907306700n;
+      const b64 = bigIntToBase64(bigInt, 20);
+      assert.equal(b64, "B64MpqqSRGUVRn0f3LdsfHJYMMw=");
+   })
 });

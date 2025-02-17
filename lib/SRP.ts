@@ -4,22 +4,21 @@
  * @license MIT
  */
 'use strict';
-import { BigInteger, RandomGenerator } from 'jsbn';
+import { modAdd, modMultiply, modPow } from 'bigint-mod-arith';
 import { sha1 } from './SHA1';
 import {
    HashStringToByteArray,
-   bigIntegerToBytes,
    xorHashStrings,
-   byteArrayToHashString,
 } from './Utils.ts';
+import { bigIntFromByteArray, bigIntFromHex, randomBigInt, bigIntegerToBytes } from './BigInt.ts';
 
-const isBigInteger = function (x) {
-   return x instanceof BigInteger;
+const isbigint = function (x) {
+   return typeof x === 'bigint';
 };
 
-const areBigIntegers = function (...numbers: BigInteger[]) {
+const arebigints = function (...numbers: bigint[]) {
    for (let i = 0; i < numbers.length; ++i) {
-      if (!isBigInteger(numbers[i])) {
+      if (!isbigint(numbers[i])) {
          return false;
       }
    }
@@ -28,16 +27,6 @@ const areBigIntegers = function (...numbers: BigInteger[]) {
 
 const isString = function (x) {
    return typeof x === 'string';
-};
-
-const rng: RandomGenerator = {
-   nextBytes(bytes) {
-      const byteBuffer = new Uint8Array(bytes);
-      const random = window.crypto.getRandomValues(byteBuffer);
-      for (let i = 0; i < bytes.length; i++) {
-         bytes[i] = random[i];
-      }
-   },
 };
 
 /*
@@ -59,57 +48,59 @@ async function MGF1SHA1(byteArray: Uint8Array): Promise<string> {
 export class SRPOps {
    /**
     * Returns client's random number.
-    * @returns {BigInteger}
+    * @returns {bigint}
     */
-   static a(): BigInteger {
-      return new BigInteger(512, rng);
+   static a(): bigint {
+      return randomBigInt(512);
    }
 
-   static b(): BigInteger {
-      return new BigInteger(512, rng);
+   static b(): bigint {
+      return randomBigInt(512);
    }
 
    /*
     * Calculates "A", public random number.
-    * @param {BigInteger} N - A large safe prime
-    * @param {BigInteger} g - A generator modulo N
-    * @param {BigInteger} a - A random number
-    * @returns {BigInteger} g^a % N
+    * @param {bigint} N - A large safe prime
+    * @param {bigint} g - A generator modulo N
+    * @param {bigint} a - A random number
+    * @returns {bigint} g^a % N
     */
-   static A(N: BigInteger, g: BigInteger, a: BigInteger): BigInteger {
-      if (!areBigIntegers(N, g, a)) {
+   static A(N: bigint, g: bigint, a: bigint): bigint {
+      if (!arebigints(N, g, a)) {
          throw 'invalid argument: N, g and a should be big int for A';
       }
-
-      return g.modPow(a, N);
+      return modPow(g, a, N);
    }
 
    /**
     * Calculates "B", public random number.
-    * @param {BigInteger} N - A large safe prime
-    * @param {BigInteger} g - A generator modulo N
-    * @param {BigInteger} v - Password verifier
-    * @param {BigInteger} b - A random number
-    * @returns {BigInteger} k * v + g^b
+    * @param {bigint} N - A large safe prime
+    * @param {bigint} g - A generator modulo N
+    * @param {bigint} v - Password verifier
+    * @param {bigint} b - A random number
+    * @returns {bigint} k * v + g^b
     */
    static async B(
-      N: BigInteger,
-      g: BigInteger,
-      v: BigInteger,
-      b: BigInteger,
-   ): Promise<BigInteger> {
-      return (await SRPOps.k(N, g)).multiply(v).add(g.modPow(b, N)).mod(N);
+      N: bigint,
+      g: bigint,
+      v: bigint,
+      b: bigint,
+   ): Promise<bigint> {
+      let k = await SRPOps.k(N, g);
+      const mod_pow = modPow(g, b, N);
+      const kv = k * v;
+      return modAdd([kv, mod_pow], N);
    }
 
    /**
     * Calculates "u" random scrambling parameter.
     * u = SHA(A+B)
-    * @param {BigInteger} A - Client public random number
-    * @param {BigInteger} B - Client public random number
-    * @returns {BigInteger} SHA(A+B)
+    * @param {bigint} A - Client public random number
+    * @param {bigint} B - Client public random number
+    * @returns {bigint} SHA(A+B)
     */
-   static async u(A: BigInteger, B: BigInteger): Promise<BigInteger> {
-      if (!areBigIntegers(A, B)) {
+   static async u(A: bigint, B: bigint): Promise<bigint> {
+      if (!arebigints(A, B)) {
          return Promise.reject(
             'invalid argument: A and B must be big int for u',
          );
@@ -119,18 +110,18 @@ export class SRPOps {
       const Bb = bigIntegerToBytes(B, 128);
       const ABb = new Uint8Array([...Ab, ...Bb]);
       const aBbSha = await sha1(ABb);
-      return new BigInteger(aBbSha, 16);
+      return bigIntFromHex(aBbSha);
    }
 
    /**
     * Calculates "k" multiplier number
     * k = SHA(N + PAD(g))
-    * @param {BigInteger} N - A large safe prime
-    * @param {BigInteger} g - a generator modulo N
-    * @returns {BigInteger} SHA(N+PAD(g))
+    * @param {bigint} N - A large safe prime
+    * @param {bigint} g - a generator modulo N
+    * @returns {bigint} SHA(N+PAD(g))
     */
-   static async k(N: BigInteger, g: BigInteger): Promise<BigInteger> {
-      if (!areBigIntegers(N, g)) {
+   static async k(N: bigint, g: bigint): Promise<bigint> {
+      if (!arebigints(N, g)) {
          return Promise.reject(
             'invalid argument: N and g must be big int for k.',
          );
@@ -140,7 +131,8 @@ export class SRPOps {
       const gb = bigIntegerToBytes(g, 128);
       const Ngb = new Uint8Array([...Nb, ...gb]);
       const NgbSha = await sha1(Ngb);
-      return new BigInteger(NgbSha, 16);
+      const k = bigIntFromHex(NgbSha);
+      return bigIntFromHex(NgbSha);
    }
 
    /**
@@ -150,13 +142,13 @@ export class SRPOps {
     * @param {byte array} salt User's salt
     * @param {string} username User's name
     * @param {string} password User's password
-    * returns {BigInteger} SHA(salt + SHA(username + ":" + password))
+    * returns {bigint} SHA(salt + SHA(username + ":" + password))
     */
    static async x(
       salt: Uint8Array,
       username: string,
       password: string,
-   ): Promise<BigInteger> {
+   ): Promise<bigint> {
       const user = username || '';
       const pass = password || '';
 
@@ -176,68 +168,69 @@ export class SRPOps {
       const concat1ShaBytes = HashStringToByteArray(concat1Sha);
       const concat2 = new Uint8Array([...salt, ...concat1ShaBytes]);
       const concat2Sha = await sha1(concat2);
-      return new BigInteger(concat2Sha, 16);
+      return bigIntFromHex(concat2Sha);
    }
 
    /**
     * Calculates the client side value of "S".
-    * @param {BigInteger} N - A large safe prime
-    * @param {BigInteger} g - A generator modulo N
-    * @param {BigInteger} B - Server's public random number
-    * @param {BigInteger} k - Multiplier parameter
-    * @param {BigInteger} x - Private key
-    * @param {BigInteger} a - Client's private random number
-    * @param {BigInteger} u - Random scrambling parameter
-    * @returns {BigInteger} (B - g^x) ^ (a + u * x) % N
+    * @param {bigint} N - A large safe prime
+    * @param {bigint} g - A generator modulo N
+    * @param {bigint} B - Server's public random number
+    * @param {bigint} k - Multiplier parameter
+    * @param {bigint} x - Private key
+    * @param {bigint} a - Client's private random number
+    * @param {bigint} u - Random scrambling parameter
+    * @returns {bigint} (B - g^x) ^ (a + u * x) % N
     */
    static Sc(
-      N: BigInteger,
-      g: BigInteger,
-      B: BigInteger,
-      k: BigInteger,
-      x: BigInteger,
-      a: BigInteger,
-      u: BigInteger,
-   ): BigInteger {
-      if (!areBigIntegers(N, g, B, k, x, a, u)) {
+      N: bigint,
+      g: bigint,
+      B: bigint,
+      k: bigint,
+      x: bigint,
+      a: bigint,
+      u: bigint,
+   ): bigint {
+      if (!arebigints(N, g, B, k, x, a, u)) {
          throw 'invalid argument: N, g, B, k, x, a, u bust be big ints for Sc';
       }
 
-      return B.add(k.multiply(N.subtract(g.modPow(x, N))).mod(N)).modPow(
-         a.add(u.multiply(x)),
-         N,
-      );
+      const g_modpow_x_n = modPow(g, x, N);
+      const n_sub_g_modpow_x = N - g_modpow_x_n;
+      const b_prime = B + modMultiply([k, n_sub_g_modpow_x], N);
+      return modPow(b_prime, a + (u * x), N);
    }
 
    /**
     * Calculates the server side value of "S"
-    * @param {BigInteger} N - A large safe prime
-    * @param {BigInteger} A - Client's public random number
-    * @param {BigInteger} v - Verifier
-    * @param {BigInteger} b - Server's private random number
-    * @param {BigInteger} u - Random scrambling parameter
+    * @param {bigint} N - A large safe prime
+    * @param {bigint} A - Client's public random number
+    * @param {bigint} v - Verifier
+    * @param {bigint} b - Server's private random number
+    * @param {bigint} u - Random scrambling parameter
     */
    static Ss(
-      N: BigInteger,
-      A: BigInteger,
-      v: BigInteger,
-      u: BigInteger,
-      b: BigInteger,
-   ): BigInteger {
-      if (!areBigIntegers(N, A, v, b, u)) {
+      N: bigint,
+      A: bigint,
+      v: bigint,
+      u: bigint,
+      b: bigint,
+   ): bigint {
+      if (!arebigints(N, A, v, b, u)) {
          throw 'invalid argument: N, A, v, b, u must be big int for Ss';
       }
 
-      return A.multiply(v.modPow(u, N)).modPow(b, N);
+      const v_modpow_u_n = modPow(v, u, N);
+      return modPow(A * v_modpow_u_n, b, N);
    }
 
    /**
     * Calculates "K" strong session key
-    * @param {BigInteger} S - Session key
+    * @param {bigint} S - Session key
     * @returns {byte array}
     */
-   static async K(S: BigInteger): Promise<Uint8Array> {
-      if (!isBigInteger(S)) {
+   static async K(S: bigint): Promise<Uint8Array> {
+      if (!isbigint(S)) {
          return Promise.reject('invalid argument: S must be big int for K');
       }
 
@@ -253,27 +246,27 @@ export class SRPOps {
    /**
     * Calculates "M", client's proof of "K".
     *
-    * @param {BigInteger} N - a large safe prime
-    * @param {BigInteger} g - A generator modulo N
+    * @param {bigint} N - a large safe prime
+    * @param {bigint} g - A generator modulo N
     * @param {string} username - Username, defaults to ""
     * @param {byte array} salt - User's salt
-    * @param {BigInteger} A - client's public random number
-    * @param {BigInteger} B - server's public random number
+    * @param {bigint} A - client's public random number
+    * @param {bigint} B - server's public random number
     * @param {byte array} k - multiplier parameter
     * @returns {hex string} SHA(SHA(N) xor SHA(g) + SHA(username) + salt + A + B + K)
     */
    static async Mc(
-      N: BigInteger,
-      g: BigInteger,
+      N: bigint,
+      g: bigint,
       username: string,
       salt: Uint8Array,
-      A: BigInteger,
-      B: BigInteger,
+      A: bigint,
+      B: bigint,
       K: Uint8Array,
    ): Promise<string> {
       const user = username || '';
 
-      if (!areBigIntegers(N, g, A, B)) {
+      if (!arebigints(N, g, A, B)) {
          return Promise.reject('Invalid argument. Bigint missing for Mc');
       }
       if (!this.isUint8Array(salt) || !this.isUint8Array(K)) {
@@ -309,14 +302,14 @@ export class SRPOps {
     * Calculates "M", server's proof of "K"
     *
     * @param {hash string} M - Client's proof of K
-    * @param {BigInteger} A - Client's public random number
+    * @param {bigint} A - Client's public random number
     * @param {byte array} K - Strong session key
     * @returns {hex string} SHA(A+M+K)
     */
-   static async Ms(A: BigInteger, M: string, K: Uint8Array): Promise<string> {
+   static async Ms(A: bigint, M: string, K: Uint8Array): Promise<string> {
       const Mary = HashStringToByteArray(M);
 
-      if (!isBigInteger(A)) {
+      if (!isbigint(A)) {
          return Promise.reject(
             'invalid argument: A should be Big Integer for Ms',
          );
@@ -336,52 +329,55 @@ export class SRPOps {
 
    /**
     * Calculates "V", the password verifier
-    * @param {BigInteger} N - A large safe prime
-    * @param {BigInteger} g - A generator modulo N
-    * @param {BigInteger} x - Private key
-    * @returns {BigInteger} Password verifier
+    * @param {bigint} N - A large safe prime
+    * @param {bigint} g - A generator modulo N
+    * @param {bigint} x - Private key
+    * @returns {bigint} Password verifier
     */
-   static v(N: BigInteger, g: BigInteger, x: BigInteger): BigInteger {
-      if (!areBigIntegers(N, g, x)) {
+   static v(N: bigint, g: bigint, x: bigint): bigint {
+      if (!arebigints(N, g, x)) {
          throw 'invalid argument: N, g and x must be big int for v.';
       }
 
-      return g.modPow(x, N);
+      return modPow(g, x, N);
    }
 }
 
 export interface ServerInfo {
-   modulus: BigInteger;
-   generator: BigInteger;
+   modulus: bigint;
+   generator: bigint;
    salt: Uint8Array;
-   publicKey: BigInteger;
+   publicKey: bigint;
    loginToken: string;
 }
 
 export interface ClientProof {
-   clientPublicKey: BigInteger;
+   clientPublicKey: bigint;
    clientProof: string;
 }
 
+interface Identity {
+   username: string;
+   password: string;
+}
+
 export class Client {
-   username: string | undefined;
-   password: string | undefined;
+   identity: Identity | undefined;
    serverInfo: ServerInfo | undefined;
    sharedKey: Uint8Array | undefined;
 
    setIdentity(identity: { username: string; password: string }) {
-      this.username = identity.username;
-      this.password = identity.password;
+      this.identity = identity;
    }
 
    /**
     * Configure the client for the modulus, generator,
     * salt, and server's public key.
     *
-    * @param serverInfo.modulus {BigInteger}
-    * @param serverInfo.generator {BigInteger}
+    * @param serverInfo.modulus {bigint}
+    * @param serverInfo.generator {bigint}
     * @param serverInfo.salt {Array}
-    * @param serverInfo.serverPublicKey {BigInteger}
+    * @param serverInfo.serverPublicKey {bigint}
     */
    setServerInfo(serverInfo: ServerInfo) {
       if (!serverInfo.hasOwnProperty('modulus')) {
@@ -405,7 +401,7 @@ export class Client {
     * from the server info.
     */
    async generatePublicKeyAndProof(): Promise<ClientProof> {
-      if (!this.serverInfo || !this.username || !this.password) {
+      if (!this.serverInfo || !this.identity) {
          throw 'Server Info and client identity Must Be Set First';
       }
       const N = this.serverInfo.modulus;
@@ -413,7 +409,7 @@ export class Client {
       const s = this.serverInfo.salt;
       const B = this.serverInfo.publicKey;
 
-      if (B.mod(N).compareTo(BigInteger.ZERO) === 0) {
+      if (modAdd([B], N) === 0n) {
          throw 'precondition fail';
       }
 
@@ -421,20 +417,20 @@ export class Client {
       const A = await SRPOps.A(N, g, a);
       const u = await SRPOps.u(A, B);
 
-      if (u.compareTo(BigInteger.ZERO) === 0) {
+      if (u === 0n) {
          throw 'precondition fail';
       }
 
       const k = await SRPOps.k(N, g);
 
-      if (k.compareTo(BigInteger.ZERO) === 0) {
+      if (k === 0n) {
          throw 'precondition fail';
       }
 
-      const x = await SRPOps.x(s, this.username, this.password);
+      const x = await SRPOps.x(s, this.identity.username, this.identity.password);
       const S = SRPOps.Sc(N, g, B, k, x, a, u);
       const K = await SRPOps.K(S);
-      const M = await SRPOps.Mc(N, g, this.username, s, A, B, K);
+      const M = await SRPOps.Mc(N, g, this.identity.username, s, A, B, K);
 
       this.sharedKey = K;
 
@@ -445,19 +441,28 @@ export class Client {
    }
 }
 
+export type UserEntry = {
+   user: string,
+   password: string,
+   n: Uint8Array,
+   g: Uint8Array,
+   v: Uint8Array,
+   s: Uint8Array,
+}
+
 /**
  * Create a new SRP server.
  *
  * @param lookupFunc - A function returning an object with keys n, g, v, and s.
  */
 export class Server {
-   lookupFunc: Function;
-   modulus: BigInteger;
-   generator: BigInteger;
+   lookupFunc: (username: string) => UserEntry;
+   modulus: bigint;
+   generator: bigint;
    salt: any;
-   serverPrivateKey: BigInteger;
-   serverPublicKey: BigInteger;
-   verifier: BigInteger;
+   serverPrivateKey: bigint;
+   serverPublicKey: bigint;
+   verifier: bigint;
    sharedKey: any;
 
    constructor(lookupFunc) {
@@ -470,9 +475,9 @@ export class Server {
    async startLogin(username: string): Promise<ServerInfo> {
       const entry = this.lookupFunc(username);
 
-      const N = new BigInteger(byteArrayToHashString(entry.n), 16);
-      const g = new BigInteger(byteArrayToHashString(entry.g), 16);
-      const v = new BigInteger(byteArrayToHashString(entry.v), 16);
+      const N = bigIntFromByteArray(entry.n);
+      const g = bigIntFromByteArray(entry.g);
+      const v = bigIntFromByteArray(entry.v);
       const s = entry.s;
       const b = SRPOps.b();
       const B = await SRPOps.B(N, g, v, b);
@@ -506,7 +511,7 @@ export class Server {
 
       const u = await SRPOps.u(A, B);
 
-      if (u.compareTo(BigInteger.ZERO) === 0) {
+      if (u === 0n) {
          throw 'precondition fail';
       }
 
@@ -520,4 +525,3 @@ export class Server {
    }
 }
 
-export { BigInteger } from 'jsbn';

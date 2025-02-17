@@ -6,11 +6,11 @@
 'use strict';
 
 import { base64ToByteArray } from './lib/Base64';
-import { BigInteger, Client, ServerInfo } from './lib/SRP';
+import { bigIntFromBase64, bigIntToBase64 } from './lib/BigInt';
+import { Client, ServerInfo } from './lib/SRP';
 import {
    b64tohex,
    makeUrlBase64,
-   bigIntToBase64,
    hexStringToBase64,
 } from './lib/Utils';
 import parseXML from 'xml-parse-from-string';
@@ -20,12 +20,12 @@ const getText = function (el) {
 };
 
 class Prime {
-   n: BigInteger;
-   g: BigInteger;
+   n: bigint;
+   g: bigint;
 
    constructor(prime: { n: string; g: string }) {
-      (this.n = new BigInteger(b64tohex(prime.n), 16)),
-         (this.g = new BigInteger(b64tohex(prime.g), 16));
+      (this.n = bigIntFromBase64(prime.n)),
+         (this.g = bigIntFromBase64(prime.g));
    }
 }
 
@@ -63,8 +63,14 @@ function hasSessionCookie() {
    return document.cookie.search('_appwebSessionId_') !== -1;
 }
 
-function getUserNameFromLoggedInString(str) {
-   return str.match(/Logged in as: (.*)/)[1];
+function getUserNameFromLoggedInString(str: string): string {
+   let matches = str.match(/Logged in as: (.*)/);
+   if (matches && matches[1]) {
+      return matches[1];
+   }
+   else {
+      return '';
+   }
 }
 
 class Permission {
@@ -139,14 +145,9 @@ function splitParamsString(str: string): { [key: string]: string } {
    const ret = {};
    const params = str.split(',');
    for (let i = 0; i < params.length; ++i) {
-      const equals = params[i].indexOf('=');
-      if (equals === -1) {
-         throw 'not a valid params string';
-      }
-
-      const name = params[i].substr(0, equals);
-      const value = params[i].substr(equals + 1);
-
+      const split = params[i].split('=');
+      const name = split[0];
+      const value = split[1];
       ret[name] = value;
    }
    return ret;
@@ -155,7 +156,7 @@ function splitParamsString(str: string): { [key: string]: string } {
 interface ServerHeaderParams {
    N: number;
    s: Uint8Array;
-   B: BigInteger;
+   B: bigint;
    ss: string;
 }
 
@@ -176,9 +177,10 @@ function decodeServerParamsString(srpParams: string): ServerInfo {
    const params: ServerHeaderParams = {
       N: parseInt(paramStrings.N, 10),
       s: base64ToByteArray(paramStrings.s),
-      B: new BigInteger(b64tohex(paramStrings.B), 16),
+      B: bigIntFromBase64(paramStrings.B),
       ss: paramStrings.ss,
    };
+
 
    if (params.N > primes.length) {
       throw 'invalid prime index';

@@ -4,7 +4,6 @@
  * @license MIT
  */
 
-import { BigInteger } from 'jsbn';
 import { base64ToByteArray, byteArrayToBase64 } from './Base64';
 
 /**
@@ -21,7 +20,7 @@ export function HashStringToByteArray(str: string): Uint8Array {
 /**
  * Transform a byte array into a "hash string".
  */
-export function byteArrayToHashString(ar) {
+export function byteArrayToHashString(ar: Uint8Array): string {
    let hs = '';
    for (let i = 0; i < ar.length; ++i) {
       hs += ('00' + (ar[i] & 0xff).toString(16)).substr(-2);
@@ -29,35 +28,6 @@ export function byteArrayToHashString(ar) {
    return hs;
 }
 
-// jsbn's bigint doesn't give all the bytes we expect all the time...
-export function bigIntegerToBytes(
-   bi: BigInteger,
-   byteCount: number,
-): Uint8Array {
-   const bytes = bi.toByteArray();
-   const actualByteLength = bytes.length;
-
-   if (actualByteLength === byteCount) {
-      return new Uint8Array(bytes);
-   } else if (actualByteLength < byteCount) {
-      // left-pad with zeroes
-      const paddingBytes = byteCount - bytes.length;
-      const na = new Uint8Array(paddingBytes).fill(0);
-      const padded = new Uint8Array([...na, ...bytes]);
-      return padded;
-   } else if (actualByteLength > byteCount) {
-      // trim leading zeroes
-      const leaders = bytes.slice(0, bytes.length - byteCount);
-      for (let i = 0; i < leaders.length; ++i) {
-         if (leaders[i] !== 0) {
-            throw 'attmpted to truncate to ' + byteCount;
-         }
-      }
-      return new Uint8Array(bytes.slice(bytes.length - byteCount));
-   } else {
-      throw 'unreachable';
-   }
-}
 
 function numberToHex(num: number): string {
    return num.toString(16).padStart(2, '0');
@@ -80,10 +50,7 @@ export function hexStringToBase64(str: string): string {
    return byteArrayToBase64(new Uint8Array(bytes));
 }
 
-export function bigIntToBase64(ba: BigInteger, len: number): string {
-   const bytes = bigIntegerToBytes(ba, len);
-   return byteArrayToBase64(bytes);
-}
+
 
 /* XOR two hash strings.
  * Example:
